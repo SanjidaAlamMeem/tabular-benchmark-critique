@@ -1,0 +1,35 @@
+[
+  {
+    "name": "credit",
+    "rows": 16714,
+    "features": 10,
+    "class_mapping": {
+      "0": 0,
+      "1": 1
+    },
+    "source_url": "https://huggingface.co/datasets/inria-soda/tabular-benchmark/resolve/8d0ff9103525b7e3579b180230fddb3186258301/clf_num/credit.csv",
+    "sha256": "22a759296600c39a56884dafd84eb346be018c537ff096adc8c2ae7e0520f2a9"
+  },
+  {
+    "name": "electricity",
+    "rows": 38474,
+    "features": 7,
+    "class_mapping": {
+      "DOWN": 0,
+      "UP": 1
+    },
+    "source_url": "https://huggingface.co/datasets/inria-soda/tabular-benchmark/resolve/8d0ff9103525b7e3579b180230fddb3186258301/clf_num/electricity.csv",
+    "sha256": "d6005007c4b1f7ba88cf91cb1f231969cce3e49c98d445338c0ab0342ead5d7e"
+  },
+  {
+    "name": "MagicTelescope",
+    "rows": 13376,
+    "features": 10,
+    "class_mapping": {
+      "g": 0,
+      "h": 1
+    },
+    "source_url": "https://huggingface.co/datasets/inria-soda/tabular-benchmark/resolve/8d0ff9103525b7e3579b180230fddb3186258301/clf_num/MagicTelescope.csv",
+    "sha256": "67d05a42c20136481420e4df91722e6057a71e992b2fa83e6099a693e3d3d26e"
+  }
+]

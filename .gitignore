@@ -1,0 +1,17 @@
+# Keep downloaded data and generated model files outside version control.
+/data/
+/results/predictions/
+/models/
+/.venv/
+__pycache__/
+*.pyc
+
+# The written assignment and presentation are delivered separately.
+*.docx
+*.pptx
+*.pdf
+*.zip
+
+# Ignore local IDE settings and credentials.
+.env
+.vscode/
