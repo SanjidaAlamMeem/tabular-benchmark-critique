@@ -1,4 +1,6 @@
-# Tabular benchmark extension
+# Tabular benchmark critique and experimental extension
+
+Public repository name: **tabular-benchmark-critique**.
 
 A reproducible experiment comparing tree models and a neural network on three processed datasets from **Grinsztajn, Oyallon and Varoquaux (2022)**. The experiment changes training size, feature selection and model settings to investigate when a simple baseline can improve.
 
@@ -96,8 +98,21 @@ The main comparison uses the largest training subset. It compares the full-featu
 | `results/datasets.json` | Dataset sources, hashes, target mappings and dimensions |
 | `results/splits/` | Row indices for the recorded splits |
 | `results/figures/` | Plots generated from the recorded numbers |
+| `results/equal_budget_model_comparison.csv` | All full-feature families at four trials each, including F1, AUC, spread and search time |
+| `results/equal_budget_accuracy_matrix.csv` | Dataset-by-model accuracy matrix used by the revised report and slides |
+| `results/paired_tuning_effects.csv` | Every tuned setting compared with its own default on matching test rows |
+| `results/tuning_effect_summary.csv` | Mean tuning effects and counts of gains/losses for every condition |
+| `results/training_size_effect.csv` | Paired change from the smallest to largest full-feature training size |
 
 Prediction arrays are generated locally in `results/predictions/` and excluded from Git. Downloaded datasets are excluded too. Results and settings can be reproduced from the retained split indices and hashes.
+
+The 864 fits count candidate classifiers. The half-feature conditions also fit 27 training-only ranking forests; their time is included in the overall runtime. Five local protocol checks pass. The GitHub workflow is prepared for execution after publishing; a local pass does not claim remote CI has run.
+
+## Reading the evidence
+
+Start with the equal-budget model table, then the training-size curves and feature-removal effects. These are separate questions and should not be reduced to the largest average gain. `RESULTS.md` explains successful and unsuccessful conditions. Four configurations per family give equal trial counts, not equal wall-clock budgets or equally broad search spaces. The broader validation-selected policy is a secondary practical comparison.
+
+The follow-up proposed in the critique is to add independent noise to the full feature set and compare this with ranked removal under equal time budgets and fresh held-out data. It has **not** been executed or mixed into the recorded results.
 
 ## Limitations
 

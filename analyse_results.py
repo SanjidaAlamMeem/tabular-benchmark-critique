@@ -69,6 +69,39 @@ def analyse(directory):
         difference_pp=('difference_pp','mean'), difference_sd=('difference_pp','std')).reset_index()
     feature_effect.to_csv(directory / 'feature_effect.csv', index=False)
 
+    # Compare every family at the same four-trial budget with all features kept.
+    # These tables prevent the broader selection policy from hiding model differences.
+    fair = summary[(summary.setting == 'tuned') & (summary.feature_fraction == 1.0)
+                   & (summary.requested_train_size == max(config['training_sizes']))].copy()
+    fair.to_csv(directory / 'equal_budget_model_comparison.csv', index=False)
+    fair.pivot(index='dataset', columns='model', values='accuracy_mean').to_csv(
+        directory / 'equal_budget_accuracy_matrix.csv')
+
+    # Pair tuning changes with each family's own default on the identical test rows.
+    baseline_rows = results[results.setting == 'baseline']
+    tuned_rows = results[results.setting == 'tuned']
+    paired_keys = ['dataset', 'seed', 'requested_train_size', 'feature_fraction', 'model']
+    paired = baseline_rows.merge(tuned_rows, on=paired_keys, suffixes=('_baseline', '_tuned'),
+                                 validate='one_to_one')
+    paired['difference_pp'] = 100 * (paired.accuracy_tuned - paired.accuracy_baseline)
+    paired.to_csv(directory / 'paired_tuning_effects.csv', index=False)
+    paired.groupby(['dataset','requested_train_size','feature_fraction','model']).agg(
+        difference_pp=('difference_pp','mean'), difference_sd=('difference_pp','std'),
+        improvements=('difference_pp',lambda x: int((x > 0).sum())),
+        losses=('difference_pp',lambda x: int((x < 0).sum()))).reset_index().to_csv(
+            directory / 'tuning_effect_summary.csv', index=False)
+
+    # Keep endpoint learning-curve effects separate from feature-removal effects.
+    smallest = tuned[(tuned.requested_train_size == min(config['training_sizes']))
+                     & (tuned.feature_fraction == 1.0)]
+    growth = smallest.merge(full, on=['dataset','seed','model'], suffixes=('_small','_large'),
+                            validate='one_to_one')
+    growth['difference_pp'] = 100 * (growth.accuracy_large - growth.accuracy_small)
+    growth.groupby(['dataset','model']).agg(
+        small_accuracy=('accuracy_small','mean'), large_accuracy=('accuracy_large','mean'),
+        difference_pp=('difference_pp','mean'), difference_sd=('difference_pp','std')).reset_index().to_csv(
+            directory / 'training_size_effect.csv', index=False)
+
     # Plot numeric evidence for the report and for users rerunning the repository.
     figures = directory / 'figures'
     figures.mkdir(exist_ok=True)
@@ -91,6 +124,33 @@ def analyse(directory):
     fig.legend(handles, labels, loc='lower center', ncol=4, frameon=False, fontsize=10)
     fig.tight_layout(rect=[0,0.13,1,1])
     fig.savefig(figures / 'training_size.png', bbox_inches='tight')
+    plt.close(fig)
+    # Display every equal-budget model, not only the best average test result.
+    matrix = fair.pivot(index='dataset', columns='model', values='accuracy_mean')
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    positions = np.arange(len(matrix))
+    for i, model in enumerate(config['models']):
+        ax.bar(positions + (i - 1.5) * 0.18, matrix[model] * 100, 0.18,
+               label=model, color=COLOURS[model])
+    ax.set_xticks(positions, matrix.index)
+    ax.set_ylabel('Mean test accuracy (%)')
+    ax.set_ylim(0, 100)
+    ax.legend(frameon=False, ncol=2, loc='lower right')
+    fig.tight_layout()
+    fig.savefig(figures / 'equal_budget_models.png', bbox_inches='tight')
+    plt.close(fig)
+    # Keep negative ablations visible and label changes in percentage points.
+    feature_matrix = feature_effect.pivot(index='dataset', columns='model', values='difference_pp')
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    for i, model in enumerate(config['models']):
+        ax.bar(positions + (i - 1.5) * 0.18, feature_matrix[model], 0.18,
+               label=model, color=COLOURS[model])
+    ax.axhline(0, color='#555555', linewidth=0.8)
+    ax.set_xticks(positions, feature_matrix.index)
+    ax.set_ylabel('Half features minus all features (percentage points)')
+    ax.legend(frameon=False, ncol=2)
+    fig.tight_layout()
+    fig.savefig(figures / 'feature_selection_effect.png', bbox_inches='tight')
     plt.close(fig)
     fig, ax = plt.subplots(figsize=(9, 4))
     positions = np.arange(len(comparisons))

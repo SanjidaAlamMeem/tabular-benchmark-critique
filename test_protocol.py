@@ -3,7 +3,9 @@
 # Test data isolation and reproducibility rather than model-specific score values.
 import unittest
 import numpy as np
+import pandas as pd
 from run_experiment import make_splits, nested_training_indices, select_features
+from analyse_results import select_validation_winners
 
 
 class ProtocolTests(unittest.TestCase):
@@ -33,6 +35,33 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(len(selected), 5)
         self.assertIn(0, selected)
         np.testing.assert_array_equal(selected, select_features(x, y, 0.5, 17, 1)[0])
+
+    # A deliberately better test score must never override validation selection.
+    def test_model_selection_does_not_use_test_accuracy(self):
+        common = {'dataset':'example', 'seed':17, 'requested_train_size':10000,
+                  'train_size':10000, 'selected_trial':1}
+        rows = [
+            {**common,'model':'RandomForest','setting':'baseline','feature_fraction':1.0,
+             'validation_accuracy':0.7,'accuracy':0.7},
+            {**common,'model':'MLP','setting':'tuned','feature_fraction':1.0,
+             'validation_accuracy':0.9,'accuracy':0.6},
+            {**common,'model':'XGBoost','setting':'tuned','feature_fraction':1.0,
+             'validation_accuracy':0.8,'accuracy':0.99},
+        ]
+        selected = select_validation_winners(pd.DataFrame(rows)).iloc[0]
+        self.assertEqual(selected.selected_model, 'MLP')
+        self.assertAlmostEqual(selected.modified_accuracy, 0.6)
+
+    # Reordering records cannot change the documented tie-breaking rule.
+    def test_selection_ties_are_deterministic(self):
+        common = {'dataset':'example','seed':17,'requested_train_size':10000,
+                  'train_size':10000,'selected_trial':1,'validation_accuracy':0.8,'accuracy':0.75}
+        rows = [{**common,'model':'RandomForest','setting':'baseline','feature_fraction':1.0}]
+        rows += [{**common,'model':model,'setting':'tuned','feature_fraction':fraction}
+                 for model,fraction in [('XGBoost',1.0),('MLP',0.5),('MLP',1.0)]]
+        selected = select_validation_winners(pd.DataFrame(rows).sample(frac=1,random_state=3)).iloc[0]
+        self.assertEqual(selected.selected_model,'MLP')
+        self.assertEqual(selected.selected_feature_fraction,1.0)
 
 
 # Use standard unittest so checks do not require an additional testing framework.
