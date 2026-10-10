@@ -108,7 +108,7 @@ The main comparison uses the largest training subset. It compares the full-featu
 
 Prediction arrays are generated locally in `results/predictions/` and excluded from Git. Downloaded datasets are excluded too. Results and settings can be reproduced from the retained split indices and hashes.
 
-The 864 fits count candidate classifiers. The half-feature conditions also fit 27 training-only ranking forests; their time is included in the overall runtime. Five local protocol checks pass. The GitHub workflow is prepared for execution after publishing; a local pass does not claim remote CI has run.
+The 864 fits count candidate classifiers. The half-feature conditions also fit 27 training-only ranking forests; their time is included in the overall runtime. Five local protocol checks pass. GitHub Actions also passed these checks on the published experiment commit; see the [verified workflow run](https://github.com/SanjidaAlamMeem/tabular-benchmark-critique/actions/runs/38080255363) and [latest check status](https://github.com/SanjidaAlamMeem/tabular-benchmark-critique/actions).
 
 ## Reading the evidence
 
