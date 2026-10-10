@@ -1,6 +1,5 @@
 # Tabular benchmark critique and experimental extension
 
-Public repository name: **tabular-benchmark-critique**.
 
 A reproducible experiment comparing tree models and a neural network on three processed datasets from **Grinsztajn, Oyallon and Varoquaux (2022)**. The experiment changes training size, feature selection and model settings to investigate when a simple baseline can improve.
 
