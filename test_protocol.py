@@ -9,6 +9,7 @@ from analyse_results import select_validation_winners
 
 
 class ProtocolTests(unittest.TestCase):
+    # Every row must belong to one partition, with the intended 70/9/21 ratio.
     def test_partitions_are_disjoint_and_cover_all_rows(self):
         y = np.array([0, 1] * 5000)
         train, validation, test = make_splits(y, 17)
@@ -18,6 +19,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertFalse(set(validation) & set(test))
         self.assertEqual((len(train),len(validation),len(test)), (7000,900,2100))
 
+    # Reusing the seed must preserve both the sampled rows and class balance.
     def test_training_subsets_are_nested_and_balanced(self):
         y = np.array([0, 1] * 5000)
         train, _, _ = make_splits(y, 42)
@@ -27,6 +29,8 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(np.bincount(y[small]).tolist(), [500,500])
         np.testing.assert_array_equal(small, nested_training_indices(train, y, 1000, 42))
 
+    # Check the selected column count and recovery of a known informative column.
+    # The caller is responsible for passing training rows; this test uses synthetic data.
     def test_feature_selection_uses_training_input_and_keeps_column_count(self):
         rng = np.random.default_rng(5)
         x = rng.normal(size=(400, 10))

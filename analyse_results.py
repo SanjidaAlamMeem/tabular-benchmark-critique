@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+# Use stable file locations and consistent model colours across all result figures.
 ROOT = Path(__file__).resolve().parent
 COLOURS = {'RandomForest': '#192c48', 'XGBoost': '#00a0b2',
            'HistGradientBoosting': '#8a6f44', 'MLP': '#ad5477'}
@@ -85,6 +86,8 @@ def select_validation_winners(results):
         group = group[group.requested_train_size == maximum]
         baseline = group[(group.model == 'RandomForest') & (group.setting == 'baseline')
                          & (group.feature_fraction == 1.0)].iloc[0]
+        # Use validation scores across models and feature conditions; resolve ties
+        # by model name, then prefer all features within that model.
         alternatives = group[group.setting == 'tuned'].sort_values(
             ['validation_accuracy', 'model', 'feature_fraction'], ascending=[False, True, False], kind='stable')
         winner = alternatives.iloc[0]
@@ -108,12 +111,14 @@ def analyse(directory):
     assert len(trials) == conditions * 4, 'Missing hyperparameter trials.'
     assert not results.duplicated(['dataset','seed','requested_train_size','feature_fraction','model','setting']).any()
     assert results['accuracy'].between(0, 1).all()
+    # Summarise repeated splits using means and sample SDs, without significance claims.
     summary = results.groupby(['dataset','requested_train_size','feature_fraction','model','setting']).agg(
         accuracy_mean=('accuracy','mean'), accuracy_sd=('accuracy','std'),
         validation_accuracy_mean=('validation_accuracy','mean'), f1_mean=('f1','mean'),
         roc_auc_mean=('roc_auc','mean'), search_seconds_mean=('search_seconds','mean'),
         train_size=('train_size','first'), n_features=('n_features','first')).reset_index()
     summary.to_csv(directory / 'summary.csv', index=False)
+    # Report the broader validation-selected policy separately from equal-budget models.
     winners = select_validation_winners(results)
     winners.to_csv(directory / 'validation_selected_comparisons.csv', index=False)
     comparisons = winners.groupby('dataset').agg(
@@ -121,6 +126,7 @@ def analyse(directory):
         modified_accuracy=('modified_accuracy','mean'), modified_sd=('modified_accuracy','std'),
         difference_pp=('difference_pp','mean'), difference_pp_sd=('difference_pp','std')).reset_index()
     comparisons.to_csv(directory / 'main_comparison.csv', index=False)
+    # Pair all-feature and half-feature scores within each dataset, seed and model.
     tuned = results[results.setting == 'tuned']
     max_rows = tuned[tuned.requested_train_size == max(config['training_sizes'])]
     full = max_rows[max_rows.feature_fraction == 1.0]
@@ -214,6 +220,7 @@ def analyse(directory):
     fig.tight_layout()
     fig.savefig(figures / 'feature_selection_effect.png', bbox_inches='tight')
     plt.close(fig)
+    # Contrast the untuned forest with the broader policy, which has a larger search budget.
     fig, ax = plt.subplots(figsize=(9, 4))
     positions = np.arange(len(comparisons))
     ax.bar(positions - 0.18, comparisons.baseline_accuracy * 100, 0.36, label='Baseline Random Forest', color='#192c48')

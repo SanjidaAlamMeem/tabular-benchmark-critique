@@ -36,6 +36,7 @@ from sklearn.preprocessing import LabelEncoder, QuantileTransformer
 from threadpoolctl import threadpool_limits
 from xgboost import XGBClassifier
 
+# Resolve default file locations relative to the script, rather than the shell directory.
 ROOT = Path(__file__).resolve().parent
 
 
@@ -53,6 +54,7 @@ def load_dataset(spec, revision, directory):
     features = frame.drop(columns=spec['target'])
     if features.isna().any().any() or not np.isfinite(features.to_numpy(dtype=float)).all():
         raise ValueError('This numerical-only experiment requires complete finite values.')
+    # Encode the two class names without using target values to transform features.
     encoder = LabelEncoder().fit(frame[spec['target']])
     if len(encoder.classes_) != 2:
         raise ValueError('This experiment supports binary classification only.')
@@ -153,12 +155,14 @@ def append_record(path, record):
 
 # Execute a fixed factorial design and retain full tuning and split provenance.
 def run(config, data_dir, output_dir):
+    # Store the planned settings and reject directories containing an earlier run.
     output_dir.mkdir(parents=True, exist_ok=True)
     if (output_dir / 'results.csv').exists() or (output_dir / 'trials.csv').exists():
         raise FileExistsError('Choose a new output directory to avoid mixing independent runs.')
     (output_dir / 'predictions').mkdir(exist_ok=True)
     (output_dir / 'splits').mkdir(exist_ok=True)
     (output_dir / 'experiment.json').write_text(json.dumps(config, indent=2), encoding='utf-8')
+    # Record library versions, CPU settings and elapsed time for reproducibility.
     environment = {'python': platform.python_version(), 'platform': platform.platform(),
                    'numpy': np.__version__, 'pandas': pd.__version__, 'scipy': scipy.__version__,
                    'scikit-learn': sklearn.__version__, 'xgboost': xgboost.__version__,
@@ -166,6 +170,7 @@ def run(config, data_dir, output_dir):
     (output_dir / 'environment.json').write_text(json.dumps(environment, indent=2), encoding='utf-8')
     total_start = time.perf_counter()
     metadata = []
+    # Keep validation and test rows fixed while changing the training subset size.
     for spec in config['datasets']:
         features, y, info = load_dataset(spec, config['dataset_revision'], data_dir)
         metadata.append(info)
@@ -176,6 +181,8 @@ def run(config, data_dir, output_dir):
                 train = nested_training_indices(train_pool, y, requested_size, seed)
                 np.savez_compressed(output_dir / 'splits' / f"{spec['name']}_{seed}_{requested_size}.npz",
                                     train=train, validation=validation, test=test)
+                # Fit one column ranking per training subset and feature condition.
+                # Every model in that condition receives the same selected columns.
                 for fraction in config['feature_fractions']:
                     columns, selection_seconds = select_features(x[train], y[train], fraction, seed, config['threads'])
                     x_train, x_validation, x_test = x[train][:, columns], x[validation][:, columns], x[test][:, columns]
@@ -185,6 +192,7 @@ def run(config, data_dir, output_dir):
                                   'feature_fraction': fraction, 'n_features': len(columns), 'model': name}
                         best, baseline = None, None
                         search_seconds = 0.0
+                        # Give each family four candidates and log warnings as well as scores.
                         for trial, (parameters, model) in enumerate(model_candidates(name, seed, config['threads'], len(train))):
                             start = time.perf_counter()
                             with warnings.catch_warnings(record=True) as captured:
@@ -202,6 +210,7 @@ def run(config, data_dir, output_dir):
                                       'convergence_warning': any(issubclass(w.category, ConvergenceWarning) for w in captured)}
                             append_record(output_dir / 'trials.csv', record)
                             candidate = (validation_accuracy, trial, model, parameters, fit_seconds)
+                            # Select by validation accuracy; ties keep the earlier trial.
                             if best is None or candidate[0] > best[0]:
                                 best = candidate
                             if trial == 0:
@@ -219,6 +228,7 @@ def run(config, data_dir, output_dir):
                                           'test_seconds': test_seconds, 'parameters': json.dumps(parameters),
                                           'selected_features': json.dumps(features.columns[columns].tolist())})
                             key = f"{spec['name']}_{seed}_{requested_size}_{fraction}_{name}_{label}"
+                            # Retain predictions locally so the saved metrics can be checked.
                             np.savez_compressed(output_dir / 'predictions' / f'{key}.npz',
                                                 row_indices=test, y_true=y[test], y_pred=prediction, probability=probability)
                         print(f"{spec['name']} seed={seed} n={len(train)} features={len(columns)} {name}: "
