@@ -46,10 +46,16 @@ Retaining the top half of features changes tuned MLP accuracy at the largest siz
 
 The equal-budget CSV retains accuracy standard deviation, F1, ROC AUC and mean four-trial search time for every full-feature family. On electricity, HistGradientBoosting has mean F1 0.8568 and ROC AUC 0.9345, compared with MLP F1 0.7985 and AUC 0.8860. These metrics use the positive-class mappings in `datasets.json`; AUC measures ranking, not probability calibration.
 
-`paired_tuning_effects.csv` compares every tuned candidate with its own baseline on identical held-out rows. At the largest full-feature electricity size, tuning changes mean accuracy by +0.67 points for Random Forest, +0.88 for HistGradientBoosting, +1.98 for MLP and 0.00 for XGBoost. Tuning is selected on validation scores and need not improve a test score. Other sizes and feature conditions, including losses, remain in the summary.
+`paired_tuning_effects.csv` compares each condition's validation-selected model with its own baseline on identical held-out rows. At the largest full-feature electricity size, tuning changes mean accuracy by +0.67 points for Random Forest, +0.88 for HistGradientBoosting, +1.98 for MLP and 0.00 for XGBoost. Tuning is selected on validation scores and need not improve a test score. Other sizes and feature conditions, including losses, remain in the summary.
 
 The added analyses reuse the recorded experiment without retraining or changing its fixed search spaces after viewing test outcomes. New figures show all model families and negative feature-selection effects. The total candidate-fit count remains 864, plus 27 ranking forests.
 
 ## Scope and uncertainty
 
 Only three processed binary classification datasets, three overlapping splits and four small search spaces are used. The small MLP is not an exact copy of the authors' neural architectures. Electricity observations use random rather than future-date partitions. All results describe the processed benchmark task rather than deployment on the original population. Standard deviations are descriptive and are not independent confidence intervals.
+
+## Figures and interpretation
+
+The report learning curves and paired feature plots are generated from the original recorded run. They add no new candidate fits. Learning-curve bands show mean plus or minus one standard deviation across three overlapping splits; the paired plot retains all three seed-level differences, their mean and their standard deviation.
+
+Absolute accuracy and the relative tree–neural gap answer different questions. On credit, MLP loses 4.22 accuracy points after retaining half the features, while Random Forest loses 5.16. Their gap narrows even though both models become less accurate. A smaller gap alone is therefore not evidence that feature removal improved the neural model.
